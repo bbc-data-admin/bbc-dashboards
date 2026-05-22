@@ -30,7 +30,7 @@
   function injectStyles() {
     if (document.getElementById("bbc-dash-styles")) return;
     var css = "\
-.bbc-dash{max-width:600px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
+.bbc-dash{max-width:700px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
 .bbc-dash *{box-sizing:border-box}\
 .bbc-dash .bbc-head{background:linear-gradient(90deg,#112e51 0%,#1a4480 35%,#4ba4d6 100%);color:#fff;padding:16px 24px;text-align:center}\
 .bbc-dash .bbc-head h1{font-size:22px;font-weight:700;margin:0}\
