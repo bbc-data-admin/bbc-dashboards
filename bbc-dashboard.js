@@ -22,19 +22,19 @@
 
   var BB = {
     navy: "#112e51", navy2: "#1a4480", baseline: "#1a4480",
-    progress: "#4d8055", inkSoft: "#4a4a4a", inkMute: "#767676",
-    rule: "#d6d7d9", goalLine: "#5c5c5c", lightBlue: "#4ba4d6"
+    progress: "#3a7d44", inkSoft: "#4a4a4a", inkMute: "#767676",
+    rule: "#d6d7d9", goalLine: "#1a4480", lightBlue: "#4ba4d6"
   };
 
   // ---- Inject styles once -------------------------------------------
   function injectStyles() {
     if (document.getElementById("bbc-dash-styles")) return;
     var css = "\
-.bbc-dash{max-width:760px;margin:0 auto;border:1px solid #d6d7d9;border-radius:4px;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
+.bbc-dash{max-width:600px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
 .bbc-dash *{box-sizing:border-box}\
 .bbc-dash .bbc-head{background:linear-gradient(90deg,#112e51 0%,#1a4480 35%,#4ba4d6 100%);color:#fff;padding:16px 24px;text-align:center}\
 .bbc-dash .bbc-head h1{font-size:22px;font-weight:700;margin:0}\
-.bbc-dash .bbc-body{padding:18px 24px 16px}\
+.bbc-dash .bbc-body{padding:20px 24px 16px}\
 .bbc-dash .bbc-ctitle{text-align:center;margin-bottom:14px}\
 .bbc-dash .bbc-resource{font-size:18px;font-weight:700;color:#112e51;margin-bottom:2px}\
 .bbc-dash .bbc-sub{font-size:14px;color:#4a4a4a}\
@@ -81,13 +81,11 @@
         ctx.strokeStyle = BB.goalLine; ctx.setLineDash([6, 5]); ctx.lineWidth = 1.25;
         ctx.beginPath(); ctx.moveTo(ca.left, y); ctx.lineTo(ca.right, y); ctx.stroke();
         ctx.setLineDash([]);
+        // Plain navy "GOAL" label sitting just above the line at the right edge
         var t = "GOAL";
-        ctx.font = '700 11px "Source Sans 3",sans-serif';
-        var tw = ctx.measureText(t).width, padX = 5, pillW = tw + padX * 2, pillH = 14;
-        var px = ca.right - pillW - 2, py = y - pillH - 2;
-        ctx.fillStyle = "#fff"; ctx.fillRect(px, py, pillW, pillH);
-        ctx.fillStyle = BB.inkSoft; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        ctx.fillText(t, px + padX, py + pillH / 2);
+        ctx.font = '700 12px "Source Sans 3",sans-serif';
+        ctx.fillStyle = BB.navy; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+        ctx.fillText(t, ca.right - 2, y - 3);
         ctx.restore();
       }
     });
@@ -105,8 +103,15 @@
   Dashboard.prototype.render = function () {
     var labelMap = { energy: "Energy", water: "Water", waste: "Waste" };
     var self = this;
+    // The page template usually already shows a "Performance Data" header bar,
+    // so by default the card does NOT render its own (avoids a doubled header).
+    // Set "show_header": true in the partner data to render the card's own bar
+    // (useful when the dashboard stands alone on a page without one).
+    var headerHTML = (this.data.show_header === true)
+      ? '<div class="bbc-head"><h1>Performance Data</h1></div>'
+      : '';
     this.el.innerHTML =
-      '<div class="bbc-head"><h1>Performance Data</h1></div>' +
+      headerHTML +
       '<div class="bbc-body">' +
         '<div class="bbc-ctitle"><div class="bbc-resource"></div><div class="bbc-sub"></div></div>' +
         '<div class="bbc-chartwrap"><canvas role="img"></canvas></div>' +
@@ -179,7 +184,7 @@
         datasets: [{
           data: d.series.map(function (p) { return p.value; }),
           backgroundColor: colors, borderRadius: 0, borderSkipped: false,
-          maxBarThickness: 32, categoryPercentage: 0.85, barPercentage: 0.92
+          maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9
         }]
       },
       options: {
@@ -198,7 +203,8 @@
         scales: {
           x: { grid: { display: false }, border: { color: BB.rule },
                title: { display: true, text: "Reporting Period", color: BB.inkSoft, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
-          y: { beginAtZero: true, grid: { display: false }, border: { color: BB.rule },
+          y: { beginAtZero: true, suggestedMax: d.y_max || undefined,
+               grid: { display: false }, border: { color: BB.rule },
                title: { display: true, text: d.metric_label + " (" + d.unit + ")", color: BB.inkSoft, font: { size: 12, weight: "600" } } }
         }
       }
