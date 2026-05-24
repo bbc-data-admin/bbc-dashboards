@@ -4,33 +4,33 @@
    ONE shared file referenced by every partner page. Contains all chart
    logic and styling — NO partner data. Update this file to fix bugs or
    add new graph types; every page that references it picks up the change.
-
+ 
    HOW A PAGE USES IT (the per-page snippet):
      <div class="bbc-dash" data-partner='{ ...partner JSON... }'></div>
      <script src="https://[your-host]/bbc-dashboard.js"></script>
-
+ 
    The script finds every .bbc-dash element on the page, reads its
    data-partner JSON, and renders the dashboard into it. Multiple
    dashboards per page are supported.
-
+ 
    Requires Chart.js (loaded automatically from CDN if not already present).
    ===================================================================== */
 (function () {
   "use strict";
-
+ 
   var CHARTJS_CDN = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
-
+ 
   var BB = {
     navy: "#112e51", navy2: "#1a4480", baseline: "#1a4480",
     progress: "#3a7d44", inkSoft: "#4a4a4a", inkMute: "#767676",
     rule: "#d6d7d9", goalLine: "#1a4480", lightBlue: "#4ba4d6"
   };
-
+ 
   // ---- Inject styles once -------------------------------------------
   function injectStyles() {
     if (document.getElementById("bbc-dash-styles")) return;
     var css = "\
-.bbc-dash{max-width:700px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
+.bbc-dash{width:100%;max-width:960px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
 .bbc-dash *{box-sizing:border-box}\
 .bbc-dash .bbc-head{background:linear-gradient(90deg,#112e51 0%,#1a4480 35%,#4ba4d6 100%);color:#fff;padding:16px 24px;text-align:center}\
 .bbc-dash .bbc-head h1{font-size:22px;font-weight:700;margin:0}\
@@ -61,12 +61,12 @@
     s.textContent = css;
     document.head.appendChild(s);
   }
-
+ 
   var fmt = function (n, d) {
     d = d || 0;
     return Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
   };
-
+ 
   // ---- Goal line plugin ---------------------------------------------
   function registerGoalLine() {
     if (registerGoalLine.done) return;
@@ -91,7 +91,7 @@
     });
     registerGoalLine.done = true;
   }
-
+ 
   // ---- One dashboard instance ---------------------------------------
   function Dashboard(el, data) {
     this.el = el;
@@ -99,7 +99,7 @@
     this.chart = null;
     this.render();
   }
-
+ 
   Dashboard.prototype.render = function () {
     var labelMap = { energy: "Energy", water: "Water", waste: "Waste" };
     var self = this;
@@ -119,7 +119,7 @@
         '<table class="bbc-sronly"></table>' +
       '</div>' +
       '<nav class="bbc-tabs" role="tablist"></nav>';
-
+ 
     var tabsNav = this.el.querySelector(".bbc-tabs");
     ["energy", "water", "waste"].forEach(function (res) {
       var btn = document.createElement("button");
@@ -131,14 +131,14 @@
       btn.dataset.res = res;
       tabsNav.appendChild(btn);
     });
-
+ 
     var order = ["energy", "water", "waste"];
     var first = order.filter(function (r) {
       return self.data.resources && self.data.resources[r] && self.data.resources[r].available;
     })[0] || "energy";
     this.select(first);
   };
-
+ 
   Dashboard.prototype.select = function (res) {
     var labelMap = { energy: "Energy", water: "Water", waste: "Waste" };
     var self = this;
@@ -147,15 +147,15 @@
       t.classList.toggle("bbc-active", active);
       t.setAttribute("aria-selected", active ? "true" : "false");
     });
-
+ 
     var d = this.data.resources ? this.data.resources[res] : null;
     this.el.querySelector(".bbc-resource").textContent = labelMap[res];
     if (this.chart) { this.chart.destroy(); this.chart = null; }
-
+ 
     var narr = this.el.querySelector(".bbc-narr");
     var wrap = this.el.querySelector(".bbc-narrwrap");
     var chartwrap = this.el.querySelector(".bbc-chartwrap");
-
+ 
     if (!d || !d.available) {
       this.el.querySelector(".bbc-sub").textContent = "";
       narr.classList.add("bbc-empty");
@@ -173,7 +173,7 @@
     this.renderTable(d, labelMap[res]);
     this.updateFade();
   };
-
+ 
   Dashboard.prototype.renderChart = function (d) {
     var canvas = this.el.querySelector("canvas");
     var colors = d.series.map(function (p) { return p.is_baseline ? BB.baseline : BB.progress; });
@@ -210,7 +210,7 @@
       }
     });
   };
-
+ 
   Dashboard.prototype.renderTable = function (d, label) {
     var rows = d.series.map(function (p) {
       return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + fmt(p.value, 1) + "</td></tr>";
@@ -219,7 +219,7 @@
       "<caption>" + label + " performance: " + d.metric_label + " (" + d.unit + ") by reporting period. Goal: " + fmt(d.goal_value, 1) + " " + d.unit + ".</caption>" +
       "<thead><tr><th>Reporting Period</th><th>" + d.metric_label + " (" + d.unit + ")</th></tr></thead><tbody>" + rows + "</tbody>";
   };
-
+ 
   Dashboard.prototype.updateFade = function () {
     var narr = this.el.querySelector(".bbc-narr");
     var wrap = this.el.querySelector(".bbc-narrwrap");
@@ -235,7 +235,7 @@
       narr.dataset.fadeBound = "true";
     }
   };
-
+ 
   // ---- Boot: find all .bbc-dash elements and render ------------------
   function boot() {
     injectStyles();
@@ -251,7 +251,7 @@
       new Dashboard(el, data);
     });
   }
-
+ 
   function ensureChartThenBoot() {
     if (window.Chart) { boot(); return; }
     var existing = document.querySelector('script[data-bbc-chartjs]');
@@ -267,7 +267,7 @@
     };
     document.head.appendChild(s);
   }
-
+ 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", ensureChartThenBoot);
   } else {
