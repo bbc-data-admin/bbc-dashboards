@@ -102,6 +102,7 @@
  
   Dashboard.prototype.render = function () {
     var labelMap = { energy: "Energy", water: "Water", waste: "Waste" };
+    var order = ["energy", "water", "waste"];
     var self = this;
     // The page template usually already shows a "Performance Data" header bar,
     // so by default the card does NOT render its own (avoids a doubled header).
@@ -121,22 +122,34 @@
       '<nav class="bbc-tabs" role="tablist"></nav>';
  
     var tabsNav = this.el.querySelector(".bbc-tabs");
-    ["energy", "water", "waste"].forEach(function (res) {
+    var availableResources = order.filter(function (res) {
+      var rd = self.data.resources ? self.data.resources[res] : null;
+      return !!(rd && rd.available);
+    });
+
+    if (!availableResources.length) {
+      this.el.querySelector(".bbc-resource").textContent = "Performance Data";
+      this.el.querySelector(".bbc-sub").textContent = "";
+      var narr = this.el.querySelector(".bbc-narr");
+      narr.classList.add("bbc-empty");
+      narr.textContent = "No active performance data is currently available for this partner.";
+      this.el.querySelector(".bbc-chartwrap").style.display = "none";
+      this.el.querySelector(".bbc-sronly").innerHTML = "";
+      tabsNav.style.display = "none";
+      this.updateFade();
+      return;
+    }
+
+    availableResources.forEach(function (res) {
       var btn = document.createElement("button");
       btn.className = "bbc-tab"; btn.type = "button"; btn.setAttribute("role", "tab");
       btn.textContent = labelMap[res];
-      var rd = self.data.resources ? self.data.resources[res] : null;
-      if (!rd) btn.disabled = true;
       btn.addEventListener("click", function () { self.select(res); });
       btn.dataset.res = res;
       tabsNav.appendChild(btn);
     });
  
-    var order = ["energy", "water", "waste"];
-    var first = order.filter(function (r) {
-      return self.data.resources && self.data.resources[r] && self.data.resources[r].available;
-    })[0] || "energy";
-    this.select(first);
+    this.select(availableResources[0]);
   };
  
   Dashboard.prototype.select = function (res) {
