@@ -21,9 +21,9 @@
   var CHARTJS_CDN = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
  
   var BB = {
-    navy: "#112e51", navy2: "#1a4480", baseline: "#1a4480",
-    progress: "#3a7d44", inkSoft: "#4a4a4a", inkMute: "#767676",
-    rule: "#d6d7d9", goalLine: "#1a4480", lightBlue: "#4ba4d6"
+    navy: "#1D428A", navy2: "#1D428A", baseline: "#1D428A",
+    progress: "#007A3E", inkSoft: "#4a4a4a", inkMute: "#767676",
+    rule: "#d6d7d9", goalLine: "#1D428A", lightBlue: "#4ba4d6"
   };
  
   // ---- Inject styles once -------------------------------------------
@@ -32,11 +32,11 @@
     var css = "\
 .bbc-dash{width:100%;max-width:960px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
 .bbc-dash *{box-sizing:border-box}\
-.bbc-dash .bbc-head{background:linear-gradient(90deg,#112e51 0%,#1a4480 35%,#4ba4d6 100%);color:#fff;padding:16px 24px;text-align:center}\
+.bbc-dash .bbc-head{background:linear-gradient(90deg,#1D428A 0%,#1D428A 35%,#4ba4d6 100%);color:#fff;padding:16px 24px;text-align:center}\
 .bbc-dash .bbc-head h1{font-size:22px;font-weight:700;margin:0}\
 .bbc-dash .bbc-body{padding:20px 24px 16px}\
 .bbc-dash .bbc-ctitle{text-align:center;margin-bottom:14px}\
-.bbc-dash .bbc-resource{font-size:18px;font-weight:700;color:#112e51;margin-bottom:2px}\
+.bbc-dash .bbc-resource{font-size:18px;font-weight:700;color:#1D428A;margin-bottom:2px}\
 .bbc-dash .bbc-sub{font-size:14px;color:#4a4a4a}\
 .bbc-dash .bbc-chartwrap{position:relative;height:280px;margin-bottom:14px}\
 .bbc-dash .bbc-narrwrap{position:relative;margin-top:4px}\
@@ -48,9 +48,9 @@
 .bbc-dash .bbc-narrwrap.bbc-atbottom::after{opacity:0}\
 .bbc-dash .bbc-narr.bbc-empty{color:#767676;font-style:italic;text-align:center;padding:20px;max-height:none;overflow:visible}\
 .bbc-dash .bbc-tabs{border-top:1px solid #d6d7d9;padding:16px 24px 20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}\
-.bbc-dash .bbc-tab{flex:1 1 0;min-width:110px;max-width:180px;padding:10px 18px;border:1.5px solid #112e51;background:#fff;color:#112e51;border-radius:999px;font:600 14px inherit;font-family:inherit;cursor:pointer;transition:background .12s,color .12s}\
-.bbc-dash .bbc-tab:hover:not(.bbc-active):not(:disabled){background:rgba(26,68,128,.06)}\
-.bbc-dash .bbc-tab.bbc-active{background:#112e51;color:#fff}\
+.bbc-dash .bbc-tab{flex:1 1 0;min-width:110px;max-width:180px;padding:10px 18px;border:1.5px solid #1D428A;background:#fff;color:#1D428A;border-radius:999px;font:600 14px inherit;font-family:inherit;cursor:pointer;transition:background .12s,color .12s}\
+.bbc-dash .bbc-tab:hover:not(.bbc-active):not(:disabled){background:rgba(29,66,138,.06)}\
+.bbc-dash .bbc-tab.bbc-active{background:#1D428A;color:#fff}\
 .bbc-dash .bbc-tab:disabled{opacity:.4;cursor:not-allowed;border-color:#767676;color:#767676}\
 .bbc-dash .bbc-tab:focus-visible{outline:2px solid #4ba4d6;outline-offset:2px}\
 .bbc-dash .bbc-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}\
@@ -190,6 +190,13 @@
   Dashboard.prototype.renderChart = function (d) {
     var canvas = this.el.querySelector("canvas");
     var colors = d.series.map(function (p) { return p.is_baseline ? BB.baseline : BB.progress; });
+    var isStandardEnergy = d.chart_type === "bar_goal" && d.metric_label === "Energy Use Intensity";
+    var baselinePoint = d.series.filter(function (p) { return p.is_baseline; })[0] || null;
+    var baselineValue = baselinePoint ? Number(baselinePoint.value) : null;
+    var yAxisTitle = isStandardEnergy
+      ? "Source EUI (kBtu/sq. ft.)"
+      : d.metric_label + " (" + d.unit + ")";
+
     this.chart = new Chart(canvas, {
       type: "bar",
       data: {
@@ -208,7 +215,12 @@
             backgroundColor: BB.navy, padding: 10, cornerRadius: 2,
             callbacks: { label: function (i) {
               var pt = d.series[i.dataIndex], tag = pt.is_baseline ? " (baseline)" : "";
-              return " " + fmt(i.parsed.y) + " " + d.unit + tag;
+              var valueLabel = " " + fmt(i.parsed.y) + " " + d.unit + tag;
+              if (!isStandardEnergy || baselineValue == null || !isFinite(baselineValue) || baselineValue === 0) {
+                return valueLabel;
+              }
+              var pctImprovement = ((baselineValue - Number(pt.value)) / baselineValue) * 100;
+              return valueLabel + " | " + fmt(pctImprovement, 1) + "% Improvement from baseline";
             } }
           },
           bbcGoalLine: { value: d.goal_value }
@@ -218,7 +230,7 @@
                title: { display: true, text: "Reporting Period", color: BB.inkSoft, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
           y: { beginAtZero: true, suggestedMax: d.y_max || undefined,
                grid: { display: false }, border: { color: BB.rule },
-               title: { display: true, text: d.metric_label + " (" + d.unit + ")", color: BB.inkSoft, font: { size: 12, weight: "600" } } }
+               title: { display: true, text: yAxisTitle, color: BB.inkSoft, font: { size: 12, weight: "600" } } }
         }
       }
     });
