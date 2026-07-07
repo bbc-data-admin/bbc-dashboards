@@ -30,7 +30,7 @@
   function injectStyles() {
     if (document.getElementById("bbc-dash-styles")) return;
     var css = "\
-.bbc-dash{width:100%;max-width:960px;margin:0 auto;overflow:hidden;background:#fff;font-family:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
+  .bbc-dash{width:100%;max-width:960px;margin:0 auto;overflow:hidden;background:#fff;font-family:Arial,sans-serif;color:#1b1b1b;font-size:15px;line-height:1.5}\
 .bbc-dash *{box-sizing:border-box}\
 .bbc-dash .bbc-head{background:linear-gradient(90deg,#1D428A 0%,#1D428A 35%,#4ba4d6 100%);color:#fff;padding:16px 24px;text-align:center}\
 .bbc-dash .bbc-head h1{font-size:22px;font-weight:700;margin:0}\
@@ -83,7 +83,7 @@
         ctx.setLineDash([]);
         // Plain navy "GOAL" label sitting just above the line at the right edge
         var t = "GOAL";
-        ctx.font = '700 12px "Source Sans 3",sans-serif';
+        ctx.font = '700 12px Arial,sans-serif';
         ctx.fillStyle = BB.navy; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
         ctx.fillText(t, ca.right - 2, y - 3);
         ctx.restore();
