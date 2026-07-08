@@ -23,7 +23,7 @@
   var BB = {
     navy: "#1D428A", navy2: "#1D428A", baseline: "#1D428A",
     progress: "#007A3E", inkSoft: "#4a4a4a", inkMute: "#767676",
-    rule: "#d6d7d9", goalLine: "#1D428A", lightBlue: "#4ba4d6"
+    rule: "#d6d7d9", goalLine: "rgba(0,0,0,0.5)", goalLabelBg: "rgba(214,215,217,0.92)", lightBlue: "#4ba4d6"
   };
  
   // ---- Inject styles once -------------------------------------------
@@ -81,11 +81,46 @@
         ctx.strokeStyle = BB.goalLine; ctx.setLineDash([6, 5]); ctx.lineWidth = 1.25;
         ctx.beginPath(); ctx.moveTo(ca.left, y); ctx.lineTo(ca.right, y); ctx.stroke();
         ctx.setLineDash([]);
-        // Plain navy "GOAL" label sitting just above the line at the right edge
+        // Render a light tag behind GOAL text so it stays readable over bars/lines.
         var t = "GOAL";
         ctx.font = '700 12px Arial,sans-serif';
-        ctx.fillStyle = BB.navy; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
-        ctx.fillText(t, ca.right - 2, y - 3);
+        var textW = ctx.measureText(t).width;
+        var padX = 6;
+        var boxW = Math.ceil(textW + padX * 2);
+        var boxH = 16;
+        var x = ca.right - boxW - 2;
+        var yTop = y - boxH - 3;
+        if (yTop < ca.top + 2) yTop = y + 3;
+        if (yTop + boxH > ca.bottom - 1) yTop = Math.max(ca.top + 2, y - boxH - 3);
+        ctx.fillStyle = BB.goalLabelBg;
+        ctx.fillRect(x, yTop, boxW, boxH);
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(t, x + padX, yTop + boxH / 2);
+        ctx.restore();
+      }
+    }, {
+      id: "bbcSavingsBadge",
+      afterDatasetsDraw: function (chart, args, opts) {
+        if (!opts || !opts.text) return;
+        var ca = chart.chartArea, ctx = chart.ctx;
+        if (!ca) return;
+        ctx.save();
+        ctx.font = '700 12px Arial,sans-serif';
+        var text = String(opts.text);
+        var textW = ctx.measureText(text).width;
+        var padX = 8;
+        var boxH = 18;
+        var boxW = Math.ceil(textW + padX * 2);
+        var x = ca.left + 8;
+        var y = ca.top + 6;
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.fillRect(x, y, boxW, boxH);
+        ctx.fillStyle = BB.navy;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x + padX, y + boxH / 2);
         ctx.restore();
       }
     });
@@ -140,6 +175,10 @@
       return;
     }
 
+    if (availableResources.length === 1) {
+      tabsNav.style.display = "none";
+    }
+
     availableResources.forEach(function (res) {
       var btn = document.createElement("button");
       btn.className = "bbc-tab"; btn.type = "button"; btn.setAttribute("role", "tab");
@@ -182,19 +221,29 @@
     this.el.querySelector(".bbc-sub").textContent = d.metric_label + " by Reporting Period";
     narr.classList.remove("bbc-empty");
     narr.innerHTML = d.narrative || "";
-    this.renderChart(d);
+    this.renderChart(d, res);
     this.renderTable(d, labelMap[res]);
     this.updateFade();
   };
  
-  Dashboard.prototype.renderChart = function (d) {
+  Dashboard.prototype.renderChart = function (d, res) {
     var canvas = this.el.querySelector("canvas");
     var colors = d.series.map(function (p) { return p.is_baseline ? BB.baseline : BB.progress; });
     var isStandardEnergy = d.chart_type === "bar_goal" && d.metric_label === "Energy Use Intensity";
+    var isStandardWater = d.chart_type === "bar_goal" && d.metric_label === "Water Use Intensity";
     var isAapi = d.chart_type === "aapi_combo";
     var isLineTrend = d.chart_type === "line_trend";
     var baselinePoint = d.series.filter(function (p) { return p.is_baseline; })[0] || null;
     var baselineValue = baselinePoint ? Number(baselinePoint.value) : null;
+    var latestPoint = d.series.length ? d.series[d.series.length - 1] : null;
+    var latestValue = latestPoint ? Number(latestPoint.value) : null;
+    var showSavingsBadge = (res === "energy" || res === "water") && (isStandardEnergy || isStandardWater)
+      && baselineValue != null && isFinite(baselineValue) && baselineValue !== 0
+      && latestValue != null && isFinite(latestValue);
+    var savingsPct = showSavingsBadge ? ((baselineValue - latestValue) / baselineValue) * 100 : null;
+    var savingsText = showSavingsBadge
+      ? "Total Savings: " + fmt(Math.abs(savingsPct), 1) + "%" + (savingsPct < 0 ? " increase" : "")
+      : "";
     var yAxisTitle = isStandardEnergy
       ? "Source EUI (kBtu/sq. ft.)"
       : d.metric_label + " (" + d.unit + ")";
@@ -268,7 +317,8 @@
               return valueLabel + " | " + fmt(pctImprovement, 1) + "% Improvement from baseline";
             } }
           },
-          bbcGoalLine: { value: d.goal_value }
+          bbcGoalLine: { value: d.goal_value },
+          bbcSavingsBadge: showSavingsBadge ? { text: savingsText } : { text: null }
         },
         scales: {
           x: { grid: { display: false }, border: { color: BB.rule },
