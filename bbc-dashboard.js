@@ -191,21 +191,66 @@
     var canvas = this.el.querySelector("canvas");
     var colors = d.series.map(function (p) { return p.is_baseline ? BB.baseline : BB.progress; });
     var isStandardEnergy = d.chart_type === "bar_goal" && d.metric_label === "Energy Use Intensity";
+    var isAapi = d.chart_type === "aapi_combo";
+    var isLineTrend = d.chart_type === "line_trend";
     var baselinePoint = d.series.filter(function (p) { return p.is_baseline; })[0] || null;
     var baselineValue = baselinePoint ? Number(baselinePoint.value) : null;
     var yAxisTitle = isStandardEnergy
       ? "Source EUI (kBtu/sq. ft.)"
       : d.metric_label + " (" + d.unit + ")";
 
+    var datasets;
+    if (isAapi) {
+      datasets = [
+        {
+          type: "bar",
+          data: d.series.map(function (p) { return p.value; }),
+          backgroundColor: BB.progress,
+          borderRadius: 0,
+          borderSkipped: false,
+          maxBarThickness: 40,
+          categoryPercentage: 0.8,
+          barPercentage: 0.9,
+        },
+        {
+          type: "line",
+          data: d.series.map(function (p) { return p.value; }),
+          borderColor: BB.navy,
+          backgroundColor: BB.navy,
+          pointBackgroundColor: BB.navy,
+          pointRadius: 3,
+          borderWidth: 2,
+          tension: 0.2,
+          fill: false,
+        }
+      ];
+    } else if (isLineTrend) {
+      datasets = [
+        {
+          type: "line",
+          data: d.series.map(function (p) { return p.value; }),
+          borderColor: BB.progress,
+          backgroundColor: BB.progress,
+          pointBackgroundColor: BB.progress,
+          pointRadius: 3,
+          borderWidth: 2,
+          tension: 0.2,
+          fill: false,
+        }
+      ];
+    } else {
+      datasets = [{
+        data: d.series.map(function (p) { return p.value; }),
+        backgroundColor: colors, borderRadius: 0, borderSkipped: false,
+        maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9
+      }];
+    }
+
     this.chart = new Chart(canvas, {
-      type: "bar",
+      type: isLineTrend ? "line" : "bar",
       data: {
         labels: d.series.map(function (p) { return p.year; }),
-        datasets: [{
-          data: d.series.map(function (p) { return p.value; }),
-          backgroundColor: colors, borderRadius: 0, borderSkipped: false,
-          maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9
-        }]
+        datasets: datasets
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -240,8 +285,11 @@
     var rows = d.series.map(function (p) {
       return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + fmt(p.value, 1) + "</td></tr>";
     }).join("");
+    var goalText = (d.goal_value == null)
+      ? "Goal: Not specified."
+      : "Goal: " + fmt(d.goal_value, 1) + " " + d.unit + ".";
     this.el.querySelector(".bbc-sronly").innerHTML =
-      "<caption>" + label + " performance: " + d.metric_label + " (" + d.unit + ") by reporting period. Goal: " + fmt(d.goal_value, 1) + " " + d.unit + ".</caption>" +
+      "<caption>" + label + " performance: " + d.metric_label + " (" + d.unit + ") by reporting period. " + goalText + "</caption>" +
       "<thead><tr><th>Reporting Period</th><th>" + d.metric_label + " (" + d.unit + ")</th></tr></thead><tbody>" + rows + "</tbody>";
   };
  
