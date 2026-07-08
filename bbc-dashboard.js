@@ -22,8 +22,8 @@
  
   var BB = {
     navy: "#1D428A", navy2: "#1D428A", baseline: "#1D428A",
-    progress: "#007A3E", inkSoft: "#4a4a4a", inkMute: "#767676",
-    rule: "#d6d7d9", goalLine: "rgba(0,0,0,0.5)", goalLabelBg: "rgba(214,215,217,0.92)", lightBlue: "#4ba4d6"
+    progress: "#007A3E", inkSoft: "#4a4a4a", inkAxis: "#2f2f2f", inkMute: "#767676",
+    rule: "#d6d7d9", goalLine: "rgba(125,125,125,0.9)", goalLabelBg: "rgba(214,215,217,0.92)", lightBlue: "#4ba4d6"
   };
  
   // ---- Inject styles once -------------------------------------------
@@ -36,7 +36,7 @@
 .bbc-dash .bbc-head h1{font-size:22px;font-weight:700;margin:0}\
 .bbc-dash .bbc-body{padding:20px 24px 16px}\
 .bbc-dash .bbc-ctitle{text-align:center;margin-bottom:14px}\
-.bbc-dash .bbc-resource{font-size:18px;font-weight:700;color:#1D428A;margin-bottom:2px}\
+.bbc-dash .bbc-resource{font-size:20px;font-weight:700;color:#1D428A;margin-bottom:2px}\
 .bbc-dash .bbc-sub{font-size:14px;color:#4a4a4a}\
 .bbc-dash .bbc-chartwrap{position:relative;height:280px;margin-bottom:14px}\
 .bbc-dash .bbc-narrwrap{position:relative;margin-top:4px}\
@@ -54,7 +54,7 @@
 .bbc-dash .bbc-tab:disabled{opacity:.4;cursor:not-allowed;border-color:#767676;color:#767676}\
 .bbc-dash .bbc-tab:focus-visible{outline:2px solid #4ba4d6;outline-offset:2px}\
 .bbc-dash .bbc-sronly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}\
-@media(max-width:480px){.bbc-dash .bbc-head h1{font-size:18px}.bbc-dash .bbc-resource{font-size:16px}.bbc-dash .bbc-chartwrap{height:240px}.bbc-dash .bbc-tabs{padding:14px 16px 16px;gap:8px}.bbc-dash .bbc-tab{padding:8px 12px;font-size:13px;min-width:0}.bbc-dash .bbc-body{padding:14px 16px 12px}}\
+@media(max-width:480px){.bbc-dash .bbc-head h1{font-size:18px}.bbc-dash .bbc-resource{font-size:17px}.bbc-dash .bbc-chartwrap{height:240px}.bbc-dash .bbc-tabs{padding:14px 16px 16px;gap:8px}.bbc-dash .bbc-tab{padding:8px 12px;font-size:13px;min-width:0}.bbc-dash .bbc-body{padding:14px 16px 12px}}\
 @media(prefers-reduced-motion:reduce){.bbc-dash *{animation:none!important;transition:none!important}}";
     var s = document.createElement("style");
     s.id = "bbc-dash-styles";
@@ -78,10 +78,10 @@
         var y = sc.y.getPixelForValue(opts.value);
         if (y < ca.top || y > ca.bottom) return;
         ctx.save();
-        ctx.strokeStyle = BB.goalLine; ctx.setLineDash([6, 5]); ctx.lineWidth = 1.25;
+        ctx.strokeStyle = BB.goalLine; ctx.setLineDash([6, 5]); ctx.lineWidth = 2.25;
         ctx.beginPath(); ctx.moveTo(ca.left, y); ctx.lineTo(ca.right, y); ctx.stroke();
         ctx.setLineDash([]);
-        // Render a light tag behind GOAL text so it stays readable over bars/lines.
+        // Render a GOAL chip; background is only drawn when overlap is detected.
         var t = "GOAL";
         ctx.font = '700 12px Arial,sans-serif';
         var textW = ctx.measureText(t).width;
@@ -92,12 +92,29 @@
         var yTop = y - boxH - 3;
         if (yTop < ca.top + 2) yTop = y + 3;
         if (yTop + boxH > ca.bottom - 1) yTop = Math.max(ca.top + 2, y - boxH - 3);
-        ctx.fillStyle = BB.goalLabelBg;
-        ctx.fillRect(x, yTop, boxW, boxH);
-        ctx.fillStyle = "#000";
-        ctx.textAlign = "left";
+        var overlap = false;
+        chart.getSortedVisibleDatasetMetas().forEach(function (meta) {
+          if (overlap || meta.type !== "bar") return;
+          meta.data.forEach(function (bar) {
+            if (overlap || !bar || typeof bar.getProps !== "function") return;
+            var p = bar.getProps(["x", "y", "base", "width"], true);
+            var left = p.x - (p.width / 2);
+            var right = p.x + (p.width / 2);
+            var top = Math.min(p.y, p.base);
+            var bottom = Math.max(p.y, p.base);
+            if (right >= x && left <= x + boxW && bottom >= yTop && top <= yTop + boxH) {
+              overlap = true;
+            }
+          });
+        });
+        if (overlap) {
+          ctx.fillStyle = BB.goalLabelBg;
+          ctx.fillRect(x, yTop, boxW, boxH);
+        }
+        ctx.fillStyle = BB.navy;
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(t, x + padX, yTop + boxH / 2);
+        ctx.fillText(t, x + (boxW / 2), yTop + boxH / 2);
         ctx.restore();
       }
     }, {
@@ -113,7 +130,7 @@
         var padX = 8;
         var boxH = 18;
         var boxW = Math.ceil(textW + padX * 2);
-        var x = ca.left + 8;
+        var x = ca.right - boxW - 8;
         var y = ca.top + 6;
         ctx.fillStyle = "rgba(255,255,255,0.92)";
         ctx.fillRect(x, y, boxW, boxH);
@@ -218,7 +235,9 @@
       return;
     }
     chartwrap.style.display = "block";
-    this.el.querySelector(".bbc-sub").textContent = d.metric_label + " by Reporting Period";
+    var subEl = this.el.querySelector(".bbc-sub");
+    subEl.textContent = d.metric_label + " by Reporting Period";
+    subEl.style.fontWeight = d.metric_label === "Energy Use Intensity" ? "700" : "400";
     narr.classList.remove("bbc-empty");
     narr.innerHTML = d.narrative || "";
     this.renderChart(d, res);
@@ -247,6 +266,12 @@
     var yAxisTitle = isStandardEnergy
       ? "Source EUI (kBtu/sq. ft.)"
       : d.metric_label + " (" + d.unit + ")";
+    var seriesCount = Math.max(1, d.series.length);
+    var barSizing = seriesCount <= 2
+      ? { maxBarThickness: 88, categoryPercentage: 0.9, barPercentage: 0.92 }
+      : seriesCount <= 4
+        ? { maxBarThickness: 60, categoryPercentage: 0.82, barPercentage: 0.9 }
+        : { maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9 };
 
     var datasets;
     if (isAapi) {
@@ -257,20 +282,9 @@
           backgroundColor: BB.progress,
           borderRadius: 0,
           borderSkipped: false,
-          maxBarThickness: 40,
-          categoryPercentage: 0.8,
-          barPercentage: 0.9,
-        },
-        {
-          type: "line",
-          data: d.series.map(function (p) { return p.value; }),
-          borderColor: BB.navy,
-          backgroundColor: BB.navy,
-          pointBackgroundColor: BB.navy,
-          pointRadius: 3,
-          borderWidth: 2,
-          tension: 0.2,
-          fill: false,
+          maxBarThickness: barSizing.maxBarThickness,
+          categoryPercentage: barSizing.categoryPercentage,
+          barPercentage: barSizing.barPercentage,
         }
       ];
     } else if (isLineTrend) {
@@ -291,7 +305,9 @@
       datasets = [{
         data: d.series.map(function (p) { return p.value; }),
         backgroundColor: colors, borderRadius: 0, borderSkipped: false,
-        maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9
+        maxBarThickness: barSizing.maxBarThickness,
+        categoryPercentage: barSizing.categoryPercentage,
+        barPercentage: barSizing.barPercentage
       }];
     }
 
@@ -309,7 +325,9 @@
             backgroundColor: BB.navy, padding: 10, cornerRadius: 2,
             callbacks: { label: function (i) {
               var pt = d.series[i.dataIndex], tag = pt.is_baseline ? " (baseline)" : "";
-              var valueLabel = " " + fmt(i.parsed.y) + " " + d.unit + tag;
+              var valueLabel = isAapi
+                ? (" " + fmt(i.parsed.y, 0) + "%" + tag)
+                : (" " + fmt(i.parsed.y) + " " + d.unit + tag);
               if (!isStandardEnergy || baselineValue == null || !isFinite(baselineValue) || baselineValue === 0) {
                 return valueLabel;
               }
@@ -322,22 +340,33 @@
         },
         scales: {
           x: { grid: { display: false }, border: { color: BB.rule },
-               title: { display: true, text: "Reporting Period", color: BB.inkSoft, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
+               ticks: { color: BB.inkAxis },
+               title: { display: true, text: "Reporting Period", color: BB.inkAxis, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
           y: { beginAtZero: true, suggestedMax: d.y_max || undefined,
                grid: { display: false }, border: { color: BB.rule },
-               title: { display: true, text: yAxisTitle, color: BB.inkSoft, font: { size: 12, weight: "600" } } }
+               ticks: {
+                 color: BB.inkAxis,
+                 callback: function (value) {
+                   return isAapi ? (fmt(value, 0) + "%") : value;
+                 }
+               },
+               title: { display: true, text: yAxisTitle, color: BB.inkAxis, font: { size: 12, weight: "600" } } }
         }
       }
     });
   };
  
   Dashboard.prototype.renderTable = function (d, label) {
+    var isAapi = d.chart_type === "aapi_combo";
     var rows = d.series.map(function (p) {
-      return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + fmt(p.value, 1) + "</td></tr>";
+      var shown = isAapi ? (fmt(p.value, 0) + "%") : fmt(p.value, 1);
+      return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + shown + "</td></tr>";
     }).join("");
     var goalText = (d.goal_value == null)
       ? "Goal: Not specified."
-      : "Goal: " + fmt(d.goal_value, 1) + " " + d.unit + ".";
+      : (isAapi
+          ? ("Goal: " + fmt(d.goal_value, 0) + "%.")
+          : ("Goal: " + fmt(d.goal_value, 1) + " " + d.unit + "."));
     this.el.querySelector(".bbc-sronly").innerHTML =
       "<caption>" + label + " performance: " + d.metric_label + " (" + d.unit + ") by reporting period. " + goalText + "</caption>" +
       "<thead><tr><th>Reporting Period</th><th>" + d.metric_label + " (" + d.unit + ")</th></tr></thead><tbody>" + rows + "</tbody>";
