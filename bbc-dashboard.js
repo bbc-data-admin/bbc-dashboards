@@ -273,6 +273,25 @@
         ? { maxBarThickness: 60, categoryPercentage: 0.82, barPercentage: 0.9 }
         : { maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9 };
 
+    // For AAPI, calculate axis bounds to include 0, all data, and goal line
+    var yAxisMin, yAxisMax;
+    if (isAapi) {
+      var values = d.series.map(function (p) { return Number(p.value); }).filter(function (v) { return isFinite(v); });
+      if (values.length > 0) {
+        yAxisMin = Math.min.apply(null, values.concat([0]));
+        yAxisMax = Math.max.apply(null, values.concat([0, d.goal_value || 0]));
+        var padding = Math.abs(yAxisMax - yAxisMin) * 0.15;
+        yAxisMin -= padding;
+        yAxisMax += padding;
+      } else {
+        yAxisMin = -0.05;
+        yAxisMax = 0.05;
+      }
+    } else {
+      yAxisMin = 0;
+      yAxisMax = d.y_max || undefined;
+    }
+
     var datasets;
     if (isAapi) {
       datasets = [
@@ -342,9 +361,8 @@
           x: { grid: { display: false }, border: { color: BB.rule },
                ticks: { color: BB.inkAxis },
                title: { display: true, text: "Reporting Period", color: BB.inkAxis, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
-          y: { beginAtZero: true,
-               min: isAapi ? undefined : 0,
-               suggestedMax: d.y_max || undefined,
+          y: { min: yAxisMin,
+               max: yAxisMax,
                grid: { display: false }, border: { color: BB.rule },
                ticks: {
                  color: BB.inkAxis,
