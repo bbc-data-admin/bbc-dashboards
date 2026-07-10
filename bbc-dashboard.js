@@ -326,7 +326,7 @@
             callbacks: { label: function (i) {
               var pt = d.series[i.dataIndex], tag = pt.is_baseline ? " (baseline)" : "";
               var valueLabel = isAapi
-                ? (" " + fmt(i.parsed.y, 0) + "%" + tag)
+                ? (" " + fmt(i.parsed.y * 100, 1) + "%" + tag)
                 : (" " + fmt(i.parsed.y) + " " + d.unit + tag);
               if (!isStandardEnergy || baselineValue == null || !isFinite(baselineValue) || baselineValue === 0) {
                 return valueLabel;
@@ -342,12 +342,14 @@
           x: { grid: { display: false }, border: { color: BB.rule },
                ticks: { color: BB.inkAxis },
                title: { display: true, text: "Reporting Period", color: BB.inkAxis, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
-          y: { beginAtZero: true, suggestedMax: d.y_max || undefined,
+          y: { beginAtZero: isAapi ? false : true,
+               min: isAapi ? undefined : 0,
+               suggestedMax: d.y_max || undefined,
                grid: { display: false }, border: { color: BB.rule },
                ticks: {
                  color: BB.inkAxis,
                  callback: function (value) {
-                   return isAapi ? (fmt(value, 0) + "%") : value;
+                   return isAapi ? (fmt(value * 100, 1) + "%") : value;
                  }
                },
                title: { display: true, text: yAxisTitle, color: BB.inkAxis, font: { size: 12, weight: "600" } } }
@@ -359,13 +361,13 @@
   Dashboard.prototype.renderTable = function (d, label) {
     var isAapi = d.chart_type === "aapi_combo";
     var rows = d.series.map(function (p) {
-      var shown = isAapi ? (fmt(p.value, 0) + "%") : fmt(p.value, 1);
+      var shown = isAapi ? (fmt(p.value * 100, 1) + "%") : fmt(p.value, 1);
       return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + shown + "</td></tr>";
     }).join("");
     var goalText = (d.goal_value == null)
       ? "Goal: Not specified."
       : (isAapi
-          ? ("Goal: " + fmt(d.goal_value, 0) + "%.")
+          ? ("Goal: " + fmt(d.goal_value * 100, 1) + "%.")
           : ("Goal: " + fmt(d.goal_value, 1) + " " + d.unit + "."));
     this.el.querySelector(".bbc-sronly").innerHTML =
       "<caption>" + label + " performance: " + d.metric_label + " (" + d.unit + ") by reporting period. " + goalText + "</caption>" +
