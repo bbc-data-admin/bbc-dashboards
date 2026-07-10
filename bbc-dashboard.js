@@ -342,7 +342,7 @@
           x: { grid: { display: false }, border: { color: BB.rule },
                ticks: { color: BB.inkAxis },
                title: { display: true, text: "Reporting Period", color: BB.inkAxis, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
-          y: { beginAtZero: isAapi ? false : true,
+          y: { beginAtZero: true,
                min: isAapi ? undefined : 0,
                suggestedMax: d.y_max || undefined,
                grid: { display: false }, border: { color: BB.rule },
