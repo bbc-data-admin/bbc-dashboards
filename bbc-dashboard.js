@@ -343,7 +343,7 @@
                ticks: { color: BB.inkAxis },
                title: { display: true, text: "Reporting Period", color: BB.inkAxis, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
           y: { beginAtZero: true,
-               min: !isAapi ? 0 : undefined,
+               min: isAapi ? undefined : 0,
                suggestedMax: d.y_max || undefined,
                grid: { display: false }, border: { color: BB.rule },
                ticks: {
