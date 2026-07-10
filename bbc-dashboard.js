@@ -118,6 +118,19 @@
         ctx.restore();
       }
     }, {
+      id: "bbcZeroLine",
+      afterDatasetsDraw: function (chart, args, opts) {
+        if (!opts || opts.enabled !== true) return;
+        var sc = chart.scales, ca = chart.chartArea, ctx = chart.ctx;
+        if (!sc.y) return;
+        var y = sc.y.getPixelForValue(0);
+        if (y < ca.top || y > ca.bottom) return;
+        ctx.save();
+        ctx.strokeStyle = BB.inkAxis; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(ca.left, y); ctx.lineTo(ca.right, y); ctx.stroke();
+        ctx.restore();
+      }
+    }, {
       id: "bbcSavingsBadge",
       afterDatasetsDraw: function (chart, args, opts) {
         if (!opts || !opts.text) return;
@@ -273,18 +286,23 @@
         ? { maxBarThickness: 60, categoryPercentage: 0.82, barPercentage: 0.9 }
         : { maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9 };
 
-    // For AAPI, calculate axis bounds to include 0, all data, and goal line
-    var yAxisMin, yAxisMax;
+    // For AAPI, calculate axis bounds to include 0, all data, and goal line.
+    // If all values are positive, the axis starts at 0 (no negative padding);
+    // if any value is negative, extend below 0 and draw a floating zero line.
+    var yAxisMin, yAxisMax, aapiHasNegative = false;
     if (isAapi) {
       var values = d.series.map(function (p) { return Number(p.value); }).filter(function (v) { return isFinite(v); });
       if (values.length > 0) {
-        yAxisMin = Math.min.apply(null, values.concat([0]));
-        yAxisMax = Math.max.apply(null, values.concat([0, d.goal_value || 0]));
-        var padding = Math.abs(yAxisMax - yAxisMin) * 0.15;
-        yAxisMin -= padding;
-        yAxisMax += padding;
+        var goalVal = (d.goal_value != null && isFinite(d.goal_value)) ? Number(d.goal_value) : 0;
+        var dataMin = Math.min.apply(null, values.concat([goalVal]));
+        var dataMax = Math.max.apply(null, values.concat([goalVal]));
+        aapiHasNegative = dataMin < 0;
+        var span = Math.abs(dataMax - Math.min(dataMin, 0)) || 0.01;
+        var padding = span * 0.15;
+        yAxisMax = dataMax + padding;
+        yAxisMin = aapiHasNegative ? (dataMin - padding) : 0;
       } else {
-        yAxisMin = -0.05;
+        yAxisMin = 0;
         yAxisMax = 0.05;
       }
     } else {
@@ -355,6 +373,7 @@
             } }
           },
           bbcGoalLine: { value: d.goal_value },
+          bbcZeroLine: { enabled: isAapi && aapiHasNegative },
           bbcSavingsBadge: showSavingsBadge ? { text: savingsText } : { text: null }
         },
         scales: {
