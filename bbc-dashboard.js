@@ -334,6 +334,7 @@
           label: "Waste Not Diverted",
           data: d.series.map(function (p) { return Number(p.landfill_tons) || 0; }),
           backgroundColor: BB.navy,
+          order: 2,
           borderRadius: 0,
           borderSkipped: false,
           stack: "waste",
@@ -346,6 +347,7 @@
           label: "Waste Diverted",
           data: d.series.map(function (p) { return Number(p.diverted_tons) || 0; }),
           backgroundColor: BB.progress,
+          order: 2,
           borderRadius: 0,
           borderSkipped: false,
           stack: "waste",
@@ -363,6 +365,7 @@
           yAxisID: "y1",
           borderColor: BB.lightBlue,
           backgroundColor: BB.lightBlue,
+          order: 0,
           pointBackgroundColor: BB.lightBlue,
           pointBorderColor: BB.lightBlue,
           pointRadius: 3,
@@ -406,7 +409,19 @@
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: isWasteCombo,
+            position: "bottom",
+            align: "center",
+            labels: {
+              color: BB.inkAxis,
+              boxWidth: 12,
+              boxHeight: 12,
+              padding: 12,
+              font: { size: 11, weight: "600" },
+              usePointStyle: true
+            }
+          },
           tooltip: {
             backgroundColor: BB.navy, padding: 10, cornerRadius: 2,
             callbacks: { label: function (i) {
