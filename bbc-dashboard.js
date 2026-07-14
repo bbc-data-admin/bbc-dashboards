@@ -457,7 +457,7 @@
                ticks: {
                  color: BB.inkAxis,
                  callback: function (value) {
-                   return isAapi ? (fmt(value * 100, 1) + "%") : value;
+                   return isAapi ? (fmt(value * 100, 1) + "%") : fmt(value, 0);
                  }
                },
                title: { display: true, text: yAxisTitle, color: BB.inkAxis, font: { size: 12, weight: "600" } } },
