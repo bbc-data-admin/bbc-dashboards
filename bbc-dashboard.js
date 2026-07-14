@@ -265,6 +265,7 @@
     var isStandardWater = d.chart_type === "bar_goal" && d.metric_label === "Water Use Intensity";
     var isAapi = d.chart_type === "aapi_combo";
     var isLineTrend = d.chart_type === "line_trend";
+    var isWasteCombo = d.chart_type === "waste_combo";
     var baselinePoint = d.series.filter(function (p) { return p.is_baseline; })[0] || null;
     var baselineValue = baselinePoint ? Number(baselinePoint.value) : null;
     var latestPoint = d.series.length ? d.series[d.series.length - 1] : null;
@@ -278,6 +279,8 @@
       : "";
     var yAxisTitle = isStandardEnergy
       ? "Source EUI (kBtu/sq. ft.)"
+      : isWasteCombo
+      ? "Volume of Waste (tons)"
       : d.metric_label + " (" + d.unit + ")";
     var seriesCount = Math.max(1, d.series.length);
     var barSizing = seriesCount <= 2
@@ -324,6 +327,52 @@
           barPercentage: barSizing.barPercentage,
         }
       ];
+    } else if (isWasteCombo) {
+      datasets = [
+        {
+          type: "bar",
+          label: "Waste Not Diverted",
+          data: d.series.map(function (p) { return Number(p.landfill_tons) || 0; }),
+          backgroundColor: BB.navy,
+          borderRadius: 0,
+          borderSkipped: false,
+          stack: "waste",
+          maxBarThickness: barSizing.maxBarThickness,
+          categoryPercentage: barSizing.categoryPercentage,
+          barPercentage: barSizing.barPercentage
+        },
+        {
+          type: "bar",
+          label: "Waste Diverted",
+          data: d.series.map(function (p) { return Number(p.diverted_tons) || 0; }),
+          backgroundColor: BB.progress,
+          borderRadius: 0,
+          borderSkipped: false,
+          stack: "waste",
+          maxBarThickness: barSizing.maxBarThickness,
+          categoryPercentage: barSizing.categoryPercentage,
+          barPercentage: barSizing.barPercentage
+        },
+        {
+          type: "line",
+          label: "Diversion Rate",
+          data: d.series.map(function (p) {
+            var v = Number(p.diversion_rate);
+            return isFinite(v) ? v : null;
+          }),
+          yAxisID: "y1",
+          borderColor: BB.lightBlue,
+          backgroundColor: BB.lightBlue,
+          pointBackgroundColor: BB.lightBlue,
+          pointBorderColor: BB.lightBlue,
+          pointRadius: 3,
+          pointHoverRadius: 4,
+          spanGaps: true,
+          borderWidth: 2,
+          tension: 0.2,
+          fill: false,
+        }
+      ];
     } else if (isLineTrend) {
       datasets = [
         {
@@ -361,6 +410,12 @@
           tooltip: {
             backgroundColor: BB.navy, padding: 10, cornerRadius: 2,
             callbacks: { label: function (i) {
+              if (isWasteCombo) {
+                if (i.datasetIndex === 2) {
+                  return " " + fmt(i.parsed.y, 1) + "%";
+                }
+                return " " + fmt(i.parsed.y, 1) + " tons";
+              }
               var pt = d.series[i.dataIndex], tag = pt.is_baseline ? " (baseline)" : "";
               var valueLabel = isAapi
                 ? (" " + fmt(i.parsed.y * 100, 1) + "%" + tag)
@@ -372,15 +427,16 @@
               return valueLabel + " | " + fmt(pctImprovement, 1) + "% Improvement from baseline";
             } }
           },
-          bbcGoalLine: { value: d.goal_value },
+          bbcGoalLine: { value: isWasteCombo ? null : d.goal_value },
           bbcZeroLine: { enabled: isAapi && aapiHasNegative },
           bbcSavingsBadge: showSavingsBadge ? { text: savingsText } : { text: null }
         },
         scales: {
-          x: { grid: { display: false }, border: { color: BB.rule },
+          x: { stacked: isWasteCombo, grid: { display: false }, border: { color: BB.rule },
                ticks: { color: BB.inkAxis },
                title: { display: true, text: "Reporting Period", color: BB.inkAxis, font: { size: 12, weight: "600" }, padding: { top: 6 } } },
-          y: { min: yAxisMin,
+          y: { stacked: isWasteCombo,
+               min: yAxisMin,
                max: yAxisMax,
                grid: { display: false }, border: { color: BB.rule },
                ticks: {
@@ -389,7 +445,24 @@
                    return isAapi ? (fmt(value * 100, 1) + "%") : value;
                  }
                },
-               title: { display: true, text: yAxisTitle, color: BB.inkAxis, font: { size: 12, weight: "600" } } }
+               title: { display: true, text: yAxisTitle, color: BB.inkAxis, font: { size: 12, weight: "600" } } },
+          y1: {
+               display: isWasteCombo,
+               position: "right",
+               min: 0,
+               suggestedMax: 100,
+               grid: { drawOnChartArea: false },
+               ticks: {
+                 color: BB.inkAxis,
+                 callback: function (value) { return fmt(value, 0) + "%"; }
+               },
+               title: {
+                 display: isWasteCombo,
+                 text: "Diversion Rate (%)",
+                 color: BB.inkAxis,
+                 font: { size: 12, weight: "600" }
+               }
+          }
         }
       }
     });
@@ -397,6 +470,21 @@
  
   Dashboard.prototype.renderTable = function (d, label) {
     var isAapi = d.chart_type === "aapi_combo";
+    var isWasteCombo = d.chart_type === "waste_combo";
+    if (isWasteCombo) {
+      var wasteRows = d.series.map(function (p) {
+        var diverted = fmt(Number(p.diverted_tons) || 0, 1);
+        var landfill = fmt(Number(p.landfill_tons) || 0, 1);
+        var diversion = (p.diversion_rate == null || !isFinite(Number(p.diversion_rate)))
+          ? "N/A"
+          : fmt(Number(p.diversion_rate), 1) + "%";
+        return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + landfill + "</td><td>" + diverted + "</td><td>" + diversion + "</td></tr>";
+      }).join("");
+      this.el.querySelector(".bbc-sronly").innerHTML =
+        "<caption>" + label + " performance by reporting period. Stacked bars show landfill and diverted waste, and line marks diversion rate.</caption>" +
+        "<thead><tr><th>Reporting Period</th><th>Waste Not Diverted (tons)</th><th>Waste Diverted (tons)</th><th>Diversion Rate (%)</th></tr></thead><tbody>" + wasteRows + "</tbody>";
+      return;
+    }
     var rows = d.series.map(function (p) {
       var shown = isAapi ? (fmt(p.value * 100, 1) + "%") : fmt(p.value, 1);
       return "<tr><td>" + p.year + (p.is_baseline ? " (baseline)" : "") + "</td><td>" + shown + "</td></tr>";
