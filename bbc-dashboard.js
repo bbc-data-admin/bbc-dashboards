@@ -289,10 +289,9 @@
         ? { maxBarThickness: 60, categoryPercentage: 0.82, barPercentage: 0.9 }
         : { maxBarThickness: 40, categoryPercentage: 0.8, barPercentage: 0.9 };
 
-    // For AAPI, calculate axis bounds to include 0, all data, and goal line.
-    // If all values are positive, the axis starts at 0 (no negative padding);
-    // if any value is negative, extend below 0 and draw a floating zero line.
-    var yAxisMin, yAxisMax, aapiHasNegative = false;
+    // AAPI values are stored as fractions. Use a stable whole-percentage grid
+    // rather than data-dependent fractional padding, so the labels stay readable.
+    var yAxisMin, yAxisMax, aapiHasNegative = false, aapiTickStep = 0.01;
     if (isAapi) {
       var values = d.series.map(function (p) { return Number(p.value); }).filter(function (v) { return isFinite(v); });
       if (values.length > 0) {
@@ -300,13 +299,13 @@
         var dataMin = Math.min.apply(null, values.concat([goalVal]));
         var dataMax = Math.max.apply(null, values.concat([goalVal]));
         aapiHasNegative = dataMin < 0;
-        var span = Math.abs(dataMax - Math.min(dataMin, 0)) || 0.01;
-        var padding = span * 0.15;
-        yAxisMax = dataMax + padding;
-        yAxisMin = aapiHasNegative ? (dataMin - padding) : 0;
+        yAxisMin = aapiHasNegative ? Math.floor(dataMin / aapiTickStep) * aapiTickStep : 0;
+        yAxisMax = Math.ceil(dataMax / aapiTickStep) * aapiTickStep;
+        // Leave one grid interval above a value or goal that lands on the top edge.
+        if (dataMax >= yAxisMax - 0.000001) yAxisMax += aapiTickStep;
       } else {
         yAxisMin = 0;
-        yAxisMax = 0.05;
+        yAxisMax = aapiTickStep;
       }
     } else {
       yAxisMin = 0;
@@ -456,6 +455,7 @@
                grid: { display: false }, border: { color: BB.rule },
                ticks: {
                  color: BB.inkAxis,
+                 stepSize: isAapi ? aapiTickStep : undefined,
                  callback: function (value) {
                    return isAapi ? (fmt(value * 100, 1) + "%") : fmt(value, 0);
                  }
