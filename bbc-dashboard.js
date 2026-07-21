@@ -38,7 +38,8 @@
 .bbc-dash .bbc-ctitle{text-align:center;margin-bottom:14px}\
 .bbc-dash .bbc-resource{font-size:20px;font-weight:700;color:#1D428A;margin-bottom:2px}\
 .bbc-dash .bbc-sub{font-size:14px;color:#4a4a4a}\
-.bbc-dash .bbc-sub[title]{cursor:help}\
+.bbc-dash .bbc-info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:5px;border:0;border-radius:50%;background:#1D428A;color:#fff;font:700 11px/1 Arial,sans-serif;vertical-align:middle;cursor:help}\
+.bbc-dash .bbc-info:focus-visible{outline:2px solid #4ba4d6;outline-offset:2px}\
 .bbc-dash .bbc-chartwrap{position:relative;height:280px;margin-bottom:14px}\
 .bbc-dash .bbc-narrwrap{position:relative;margin-top:4px}\
 .bbc-dash .bbc-narr{font-size:14px;color:#1b1b1b;line-height:1.55;padding:0 4px 8px;max-height:110px;overflow-y:auto;scrollbar-width:thin;overflow-wrap:break-word}\
@@ -251,12 +252,17 @@
     chartwrap.style.display = "block";
     var subEl = this.el.querySelector(".bbc-sub");
     subEl.textContent = d.metric_label + " by Reporting Period";
+    var infoEl = subEl.querySelector(".bbc-info");
     if (d.metric_tooltip) {
-      subEl.title = d.metric_tooltip;
-      subEl.setAttribute("aria-label", subEl.textContent + ". " + d.metric_tooltip);
+      infoEl = document.createElement("button");
+      infoEl.className = "bbc-info";
+      infoEl.type = "button";
+      infoEl.setAttribute("aria-label", d.metric_tooltip);
+      infoEl.title = d.metric_tooltip;
+      infoEl.textContent = "i";
+      subEl.appendChild(infoEl);
     } else {
-      subEl.removeAttribute("title");
-      subEl.removeAttribute("aria-label");
+      if (infoEl) infoEl.remove();
     }
     subEl.style.fontWeight = d.metric_label === "Energy Use Intensity" ? "700" : "400";
     narr.classList.remove("bbc-empty");
