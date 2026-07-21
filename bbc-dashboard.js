@@ -271,6 +271,7 @@
     var colors = d.series.map(function (p) { return p.is_baseline ? BB.baseline : BB.progress; });
     var isStandardEnergy = d.chart_type === "bar_goal" && d.metric_label === "Energy Use Intensity";
     var isStandardWater = d.chart_type === "bar_goal" && d.metric_label === "Water Use Intensity";
+    var isIndustrialEnergy = d.chart_type === "bar_goal" && d.metric_label === "Cumulative Improvement as a % of Baseline";
     var isAapi = d.chart_type === "aapi_combo";
     var isLineTrend = d.chart_type === "line_trend";
     var isWasteCombo = d.chart_type === "waste_combo";
@@ -287,6 +288,8 @@
       : "";
     var yAxisTitle = isStandardEnergy
       ? "Source EUI (kBtu/sq. ft.)"
+      : isIndustrialEnergy
+      ? "Percent of Baseline (%)"
       : isWasteCombo
       ? "Volume of Waste (tons)"
       : d.metric_label + " (" + d.unit + ")";
