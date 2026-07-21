@@ -71,7 +71,7 @@
 
   function removeCustomPartnerText(value) {
     return String(value || "")
-      .replace(/\[inset custom partner text\](?:\s*<br\s*\/?\s*>\s*)*/ig, "")
+      .replace(/\[(?:inset|insert)\s+custom\s+partner\s+text\](?:\s*<br\s*\/?\s*>\s*)*/ig, "")
       .replace(/^(?:\s*<br\s*\/?\s*>\s*)+|(?:\s*<br\s*\/?\s*>\s*)+$/ig, "")
       .trim();
   }
