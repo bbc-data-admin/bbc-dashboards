@@ -68,6 +68,13 @@
     d = d || 0;
     return Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
   };
+
+  function removeCustomPartnerText(value) {
+    return String(value || "")
+      .replace(/\[inset custom partner text\](?:\s*<br\s*\/?\s*>\s*)*/ig, "")
+      .replace(/^(?:\s*<br\s*\/?\s*>\s*)+|(?:\s*<br\s*\/?\s*>\s*)+$/ig, "")
+      .trim();
+  }
  
   // ---- Goal line plugin ---------------------------------------------
   function registerGoalLine() {
@@ -253,12 +260,13 @@
     var subEl = this.el.querySelector(".bbc-sub");
     subEl.textContent = d.metric_label + " by Reporting Period";
     var infoEl = subEl.querySelector(".bbc-info");
-    if (d.metric_tooltip) {
+    var metricTooltip = removeCustomPartnerText(d.metric_tooltip);
+    if (metricTooltip) {
       infoEl = document.createElement("button");
       infoEl.className = "bbc-info";
       infoEl.type = "button";
-      infoEl.setAttribute("aria-label", d.metric_tooltip);
-      infoEl.title = d.metric_tooltip;
+      infoEl.setAttribute("aria-label", metricTooltip);
+      infoEl.title = metricTooltip;
       infoEl.textContent = "i";
       subEl.appendChild(infoEl);
     } else {
@@ -266,7 +274,7 @@
     }
     subEl.style.fontWeight = d.metric_label === "Energy Use Intensity" ? "700" : "400";
     narr.classList.remove("bbc-empty");
-    narr.innerHTML = d.narrative || "";
+    narr.innerHTML = removeCustomPartnerText(d.narrative);
     this.renderChart(d, res);
     this.renderTable(d, labelMap[res]);
     this.updateFade();
